@@ -135,13 +135,13 @@ function Printer() {
     
     //this.targetTemperature = settings["printer.temperature"]; // slight hack
     
-		this.sendPrintPart(this.sendIndex, this.sendLength);
+		this.sendPrintPart(this.sendIndex, this.sendLength, 0);
 	}
 	this.byteSize = function(s){
 		return~-encodeURI(s).split(/%..|./).length;
 	}
-	this.sendPrintPart = function(sendIndex,sendLength) {
-		console.log("Printer:sendPrintPart sendIndex: " + sendIndex + "/" + this.gcode.length + ", sendLength: " + sendLength);
+	this.sendPrintPart = function(sendIndex,sendLength,seqNum) {
+		console.log("Printer:sendPrintPart sendIndex: " + sendIndex + "/" + this.gcode.length + ", sendLength: " + sendLength," seqNum: ",seqNum);
 		
     var firstOne = (sendIndex == 0)? true : false;
     var start = firstOne; // start printing right away
@@ -155,7 +155,7 @@ function Printer() {
     }
     var gcodePart = this.gcode.slice(sendIndex, sendIndex+sendLength);
     
-    var postData = { gcode: gcodePart.join("\n"), first: firstOne, start: start};
+    var postData = { gcode: gcodePart.join("\n"), first: firstOne, start: start, seqNum: seqNum};
     var self = this;
     if (communicateWithWifibox) {
 	    $.ajax({
@@ -181,7 +181,7 @@ function Printer() {
 		        	console.log("Printer:sendPrintPart:gcode part received (state: ",self.state,")"); 
 		        	if(self.state == Printer.PRINTING_STATE || self.state == Printer.BUFFERING_STATE) {
 		        		console.log("Printer:sendPrintPart:sending next part");
-		        		self.sendPrintPart(sendIndex + sendLength, sendLength);
+		        		self.sendPrintPart(sendIndex + sendLength, sendLength, seqNum+1);
 		        	}
 		        }
 		      }
@@ -197,7 +197,7 @@ function Printer() {
 				clearTimeout(self.retrySendPrintPartDelay);
 				self.retrySendPrintPartDelay = setTimeout(function() {
 					console.log("request printer:sendPrintPart failed retry");
-					self.sendPrintPart(sendIndex, sendLength) 
+					self.sendPrintPart(sendIndex, sendLength, seqNum) 
 				},self.retryDelay); // retry after delay
 				
 				// after we know the gcode packed has bin received or failed
@@ -212,12 +212,14 @@ function Printer() {
 	
 	this.stop = function() {
     console.log("Printer:stop");
+    var postData = { seqNum: 0 };
 		var self = this;
 		if (communicateWithWifibox) {
 	    $.ajax({
 			  url: this.wifiboxURL + "/printer/stop",
 			  type: "POST",
 			  dataType: 'json',
+			  data: postData,
 			  timeout: this.timeoutTime,
 			  success: function(data){
 				  console.log("Printer:stop response: ", data);
