@@ -212,7 +212,7 @@ function print(e) {
   	//setState(Printer.BUFFERING_STATE,printer.hasControl);
     printer.overruleState(Printer.BUFFERING_STATE);
 
-    btnStop.css("display","none"); // hack
+    //btnStop.css("display","none"); // hack
 
     // we put the gcode generation in a little delay
     // so that for example the print button is disabled right away
